@@ -1,0 +1,659 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>VAST Inspector Pro v2.0</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css"/>
+<style>
+  :root{--bg:#0f1117;--panel:#1a1d27;--border:#2a2d3a;--accent:#6c63ff;--accent2:#00d4aa;--warn:#f59e0b;--err:#ef4444;--text:#e2e8f0;--muted:#64748b}
+  body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;font-size:14px}
+  ::-webkit-scrollbar{width:5px}::-webkit-scrollbar-track{background:var(--panel)}::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
+  .panel{background:var(--panel);border:1px solid var(--border);border-radius:12px}
+  .btn{border-radius:8px;font-weight:600;transition:all .2s;cursor:pointer;padding:8px 18px;font-size:.875rem;border:none}
+  .btn-primary{background:var(--accent);color:#fff}.btn-primary:hover{background:#5a52e0}
+  .btn-ghost{background:transparent;border:1px solid var(--border)!important;color:var(--muted)}.btn-ghost:hover{border-color:var(--accent)!important;color:var(--text)}
+  .btn-danger{background:transparent;border:1px solid var(--err)!important;color:var(--err)}.btn-danger:hover{background:var(--err);color:#fff}
+  textarea,input[type=text]{background:#12151f;border:1px solid var(--border);color:var(--text);border-radius:8px;padding:10px 12px;font-size:.82rem;width:100%;resize:none;outline:none;font-family:monospace;transition:border-color .2s}
+  textarea:focus,input[type=text]:focus{border-color:var(--accent)}
+  .tab{padding:5px 12px;font-size:.78rem;font-weight:600;cursor:pointer;border-radius:6px;color:var(--muted);transition:all .2s;border:none;background:none}
+  .tab.active{background:rgba(108,99,255,.15);color:var(--accent)}
+  .badge{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:999px;font-size:.72rem;font-weight:700}
+  .badge-ok{background:rgba(0,212,170,.15);color:var(--accent2)}
+  .badge-warn{background:rgba(245,158,11,.15);color:var(--warn)}
+  .badge-err{background:rgba(239,68,68,.15);color:var(--err)}
+  .badge-sim{background:rgba(108,99,255,.15);color:#a78bfa}
+  .section-title{font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:8px}
+  .meta-row{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border);font-size:.8rem}
+  .meta-row:last-child{border-bottom:none}.meta-key{color:var(--muted)}.meta-val{font-family:monospace;color:var(--accent2);font-size:.78rem;max-width:58%;text-align:right;word-break:break-all}
+
+  /* STATUS STEPS */
+  .step{display:flex;align-items:flex-start;gap:10px;padding:8px 10px;border-radius:8px;margin-bottom:4px;transition:all .3s}
+  .step-idle{background:rgba(255,255,255,.03)}.step-running{background:rgba(108,99,255,.08);border:1px solid rgba(108,99,255,.2)}
+  .step-ok{background:rgba(0,212,170,.06);border:1px solid rgba(0,212,170,.15)}
+  .step-warn{background:rgba(245,158,11,.06);border:1px solid rgba(245,158,11,.2)}
+  .step-error{background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.2)}
+  .step-icon{width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.75rem;flex-shrink:0;margin-top:1px}
+  .icon-idle{background:rgba(255,255,255,.06);color:var(--muted)}
+  .icon-running{background:rgba(108,99,255,.3);color:#a78bfa;animation:spin 1s linear infinite}
+  .icon-ok{background:rgba(0,212,170,.2);color:var(--accent2)}
+  .icon-warn{background:rgba(245,158,11,.2);color:var(--warn)}
+  .icon-error{background:rgba(239,68,68,.2);color:var(--err)}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .step-label{font-weight:600;font-size:.82rem}.step-desc{font-size:.76rem;color:var(--muted);margin-top:2px;line-height:1.4}
+
+  /* LOG */
+  .log-entry{padding:5px 8px;border-radius:6px;font-size:.76rem;font-family:monospace;margin-bottom:3px;border-left:3px solid transparent;line-height:1.5}
+  .log-info{border-color:var(--accent2);background:rgba(0,212,170,.05)}
+  .log-warn{border-color:var(--warn);background:rgba(245,158,11,.05)}
+  .log-error{border-color:var(--err);background:rgba(239,68,68,.05)}
+  .log-event{border-color:var(--accent);background:rgba(108,99,255,.05)}
+  .log-track{border-color:#38bdf8;background:rgba(56,189,248,.05)}
+
+  /* MACRO CHIP */
+  .macro-chip{display:inline-flex;align-items:center;gap:3px;padding:2px 7px;border-radius:4px;font-size:.7rem;font-family:monospace;margin:2px}
+  .macro-bad{background:rgba(239,68,68,.12);color:var(--err);border:1px solid rgba(239,68,68,.25)}
+  .macro-ok{background:rgba(0,212,170,.1);color:var(--accent2);border:1px solid rgba(0,212,170,.2)}
+
+  /* BEACON */
+  .beacon-item{display:flex;align-items:center;gap:6px;padding:4px 8px;border-radius:6px;font-size:.71rem;font-family:monospace;margin-bottom:2px;background:rgba(255,255,255,.03)}
+  .dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+  .dot-ok{background:var(--accent2)}.dot-warn{background:var(--warn)}.dot-err{background:var(--err)}
+
+  /* SANDBOX NOTICE */
+  .notice{background:rgba(167,139,250,.08);border:1px solid rgba(167,139,250,.25);border-radius:10px;padding:10px 14px;font-size:.78rem;line-height:1.5;color:#c4b5fd}
+
+  /* PLAYER */
+  #adContainer{position:absolute;top:0;left:0;width:100%;height:100%;z-index:10;pointer-events:none}
+  #adContainer.active{pointer-events:all}
+</style>
+</head>
+<body class="min-h-screen">
+
+<!-- HEADER -->
+<header class="flex items-center justify-between px-5 py-3 border-b" style="border-color:var(--border);background:var(--panel)">
+  <div class="flex items-center gap-3">
+    <div style="width:32px;height:32px;background:var(--accent);border-radius:8px;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:1rem">V</div>
+    <div>
+      <div class="font-bold text-sm">VAST Inspector Pro <span style="color:var(--accent);font-size:.75rem">v2.0</span></div>
+      <div style="font-size:.65rem;color:var(--muted)">IAB VAST 2/3/4 · Google IMA SDK · Real-time Event Analysis</div>
+    </div>
+  </div>
+  <div class="flex items-center gap-2">
+    <span id="sdkBadge" class="badge badge-warn">⏳ Cargando SDK…</span>
+    <span id="modeBadge" style="display:none" class="badge badge-sim">⚙ Modo Simulación</span>
+  </div>
+</header>
+
+<!-- SANDBOX NOTICE (shown if SDK fails) -->
+<div id="sandboxNotice" style="display:none;padding:8px 16px">
+  <div class="notice">
+    <strong>ℹ️ Modo Simulación activo</strong> — El SDK de Google IMA no se puede cargar en este entorno embebido por restricciones de seguridad del navegador (CSP). 
+    El inspector funciona en <strong>modo simulación</strong>: puedes validar tu VAST XML, comprobar macros y ver metadatos. 
+    Para pruebas con reproducción de vídeo real, <strong>despliega este fichero en un servidor HTTP</strong>.
+  </div>
+</div>
+
+<!-- MAIN -->
+<div class="flex gap-3 p-3" style="height:calc(100vh - 57px - var(--notice-h, 0px))">
+
+  <!-- LEFT PANEL -->
+  <div class="flex flex-col gap-3" style="width:320px;flex-shrink:0;overflow-y:auto">
+
+    <!-- INPUT -->
+    <div class="panel p-4">
+      <div class="section-title">Fuente VAST</div>
+      <div class="flex gap-1 mb-3">
+        <button class="tab active" id="tabUrl" onclick="switchTab('url')">URL del Tag</button>
+        <button class="tab" id="tabXml" onclick="switchTab('xml')">XML Directo</button>
+      </div>
+      <div id="inputUrl">
+        <input type="text" id="vastUrl" placeholder="https://pubads.g.doubleclick.net/…"/>
+        <div style="font-size:.7rem;color:var(--muted);margin-top:5px">Pega aquí la URL de tu etiqueta VAST (DFP, TTD, Xandr…)</div>
+      </div>
+      <div id="inputXml" style="display:none">
+        <textarea id="vastXml" rows="6" placeholder='<?xml version="1.0"?>\n<VAST version="4.0">…'></textarea>
+        <div style="font-size:.7rem;color:var(--muted);margin-top:5px">Pega el XML VAST completo para análisis sin servidor</div>
+      </div>
+      <div class="flex gap-2 mt-3">
+        <button class="btn btn-primary flex-1" onclick="loadAd()">▶ Inspeccionar</button>
+        <button class="btn btn-ghost" style="padding:8px 12px" onclick="resetAll()">↺</button>
+      </div>
+    </div>
+
+    <!-- PIPELINE STATUS — human-readable step tracker -->
+    <div class="panel p-4">
+      <div class="section-title">Estado del proceso</div>
+      <div id="pipeline">
+        <div class="step step-idle" id="step-sdk">
+          <div class="step-icon icon-idle" id="step-sdk-icon">1</div>
+          <div><div class="step-label">SDK de Google IMA</div><div class="step-desc" id="step-sdk-desc">Cargando librería de reproducción de anuncios…</div></div>
+        </div>
+        <div class="step step-idle" id="step-input">
+          <div class="step-icon icon-idle" id="step-input-icon">2</div>
+          <div><div class="step-label">Fuente VAST</div><div class="step-desc" id="step-input-desc">Esperando que introduzcas una URL o XML.</div></div>
+        </div>
+        <div class="step step-idle" id="step-request">
+          <div class="step-icon icon-idle" id="step-request-icon">3</div>
+          <div><div class="step-label">Solicitud al servidor de anuncios</div><div class="step-desc" id="step-request-desc">Se enviará la petición al ad server.</div></div>
+        </div>
+        <div class="step step-idle" id="step-parse">
+          <div class="step-icon icon-idle" id="step-parse-icon">4</div>
+          <div><div class="step-label">Análisis del VAST</div><div class="step-desc" id="step-parse-desc">El XML será validado y parseado.</div></div>
+        </div>
+        <div class="step step-idle" id="step-creative">
+          <div class="step-icon icon-idle" id="step-creative-icon">5</div>
+          <div><div class="step-label">Creativo de vídeo</div><div class="step-desc" id="step-creative-desc">El fichero de vídeo del anuncio será cargado.</div></div>
+        </div>
+        <div class="step step-idle" id="step-play">
+          <div class="step-icon icon-idle" id="step-play-icon">6</div>
+          <div><div class="step-label">Reproducción y tracking</div><div class="step-desc" id="step-play-desc">Se emitirán los eventos de medición.</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MACRO CHECKER -->
+    <div class="panel p-4">
+      <div class="section-title">Verificador de Macros</div>
+      <div id="macroResult" style="color:var(--muted);font-size:.79rem">Las macros son variables que el ad server debe rellenar antes de servir el anuncio. Se verificarán al inspeccionar.</div>
+    </div>
+
+    <!-- METADATA -->
+    <div class="panel p-4">
+      <div class="section-title">Metadatos del Creativo</div>
+      <div id="metaPanel"><div style="color:var(--muted);font-size:.79rem">Aquí verás información del anuncio: duración, formato, bitrate…</div></div>
+    </div>
+
+  </div><!-- /left -->
+
+  <!-- RIGHT PANEL -->
+  <div class="flex flex-col gap-3 flex-1" style="min-width:0">
+
+    <!-- PLAYER -->
+    <div class="panel" style="flex-shrink:0">
+      <div style="position:relative;padding-bottom:56.25%;background:#000;border-radius:11px;overflow:hidden">
+        <video id="videoPlayer" style="position:absolute;top:0;left:0;width:100%;height:100%;z-index:1"
+          playsinline preload="none"
+          src="https://storage.googleapis.com/gvabox/media/samples/stock.mp4"></video>
+        <div id="adContainer"></div>
+        <div id="playerOverlay" style="position:absolute;inset:0;z-index:20;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.55);cursor:pointer;flex-direction:column;gap:8px" onclick="requestPlay()">
+          <div style="width:56px;height:56px;background:var(--accent);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.4rem">▶</div>
+          <div style="font-size:.75rem;color:rgba(255,255,255,.6)">Carga un VAST y pulsa para reproducir</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- BEACONS -->
+    <div class="panel p-3" style="flex-shrink:0;max-height:140px;overflow:hidden;display:flex;flex-direction:column">
+      <div class="flex items-center justify-between mb-2">
+        <div class="section-title" style="margin-bottom:0">Píxeles de tracking capturados</div>
+        <button class="btn btn-ghost" style="padding:2px 8px;font-size:.7rem" onclick="clearBeacons()">Limpiar</button>
+      </div>
+      <div id="beaconList" style="overflow-y:auto;flex:1">
+        <div style="color:var(--muted);font-size:.76rem">Los píxeles de impresión, cuartiles y clicks aparecerán aquí en tiempo real.</div>
+      </div>
+    </div>
+
+    <!-- LOG CONSOLE -->
+    <div class="panel flex flex-col flex-1" style="min-height:0">
+      <div class="flex items-center justify-between px-4 pt-3 pb-2">
+        <div class="flex gap-1">
+          <button class="tab active" id="tabLogs" onclick="switchLogTab('logs')">Registro de eventos</button>
+          <button class="tab" id="tabErrors" onclick="switchLogTab('errors')">Errores</button>
+        </div>
+        <div class="flex items-center gap-2">
+          <span id="eventCount" class="badge" style="background:rgba(108,99,255,.12);color:var(--accent)">0 eventos</span>
+          <button class="btn btn-danger" style="padding:3px 10px;font-size:.72rem" onclick="clearLogs()">🗑 Limpiar</button>
+        </div>
+      </div>
+      <div id="logConsole" style="flex:1;overflow-y:auto;padding:4px 12px 12px;display:flex;flex-direction:column;gap:1px"></div>
+      <div id="errorConsole" style="flex:1;overflow-y:auto;padding:4px 12px 12px;display:none;flex-direction:column;gap:1px"></div>
+    </div>
+
+  </div><!-- /right -->
+</div>
+
+<script>
+// Load IMA SDK dynamically AFTER our functions are defined
+function loadImaSdk() {
+  const s = document.createElement('script');
+  s.src = 'https://imasdk.googleapis.com/js/sdkloader/ima3.js';
+  s.onload = onSdkLoad;
+  s.onerror = onSdkError;
+  document.head.appendChild(s);
+}
+</script>
+<script>
+// ─── STATE ─────────────────────────────────────────────────────────────────
+let adsLoader=null, adsManager=null, adDisplayContainer=null;
+let sdkReady=false, simMode=false;
+let activeTab='url', activeLogTab='logs', eventCount=0;
+const beacons=[];
+
+// ─── IMA ERROR DICTIONARY (human-readable) ─────────────────────────────────
+const IMA_ERRORS={
+  100:'El XML del VAST está mal formado y no se pudo leer.',
+  101:'El VAST no cumple el esquema oficial de IAB.',
+  102:'Versión de VAST no soportada (necesita 2.0 o superior).',
+  200:'No se encontró ningún fichero de vídeo válido en el VAST.',
+  201:'El vídeo del anuncio tardó demasiado en responder.',
+  202:'La reproducción del vídeo se detuvo inesperadamente.',
+  203:'La duración declarada en el VAST no coincide con el vídeo real.',
+  300:'Error genérico en la cadena de wrappers VAST.',
+  301:'El wrapper VAST no respondió a tiempo (timeout).',
+  302:'Demasiadas redirecciones de wrapper — posible bucle.',
+  303:'El wrapper VAST no devolvió ningún anuncio válido.',
+  400:'El creativo lineal no pudo cargarse.',
+  403:'El anuncio viola las reglas de trafficking configuradas.',
+  405:'El reproductor no pudo mostrar el fichero de media.',
+  503:'La respuesta VAST estaba vacía — sin anuncios disponibles.',
+  900:'Error desconocido en el IMA SDK.',
+  1005:'El navegador bloqueó la reproducción automática.',
+};
+
+// ─── MACROS a verificar ────────────────────────────────────────────────────
+const MACROS=[
+  {m:'[CACHEBUSTER]',   d:'Evita que el navegador use una respuesta cacheada'},
+  {m:'%%CACHEBUSTER%%', d:'Variante de cachebuster (Google)'},
+  {m:'[REFERRER_URL]',  d:'URL de la página donde se sirve el anuncio'},
+  {m:'[CLICK_URL_ESC]', d:'URL de click codificada'},
+  {m:'[CONTENTPLAYHEAD]',d:'Posición de reproducción del contenido'},
+  {m:'[ERRORCODE]',     d:'Código de error a rellenar en tracking de errores'},
+  {m:'[PAGEURL]',       d:'URL de la página actual'},
+  {m:'[TIMESTAMP]',     d:'Marca de tiempo Unix'},
+];
+
+// ─── SDK LIFECYCLE ─────────────────────────────────────────────────────────
+function onSdkLoad(){
+  sdkReady=true; simMode=false;
+  setStep('sdk','ok','✓ SDK cargado correctamente. El motor de anuncios está listo.');
+  setBadge('sdk','ok','✅ IMA SDK listo');
+  log('info','✅ Google IMA SDK cargado — listo para inspeccionar anuncios.');
+}
+
+function onSdkError(){
+  simMode=true;
+  setStep('sdk','warn','⚠️ El SDK de Google no pudo cargarse (restricción de seguridad del navegador). Activado modo simulación: el análisis XML, macros y metadatos funcionan con normalidad.');
+  setBadge('sdk','warn','⚠ Sin SDK');
+  document.getElementById('modeBadge').style.display='inline-flex';
+  document.getElementById('sandboxNotice').style.display='block';
+  log('warn','⚠️ IMA SDK bloqueado por CSP de este entorno. Activado modo simulación.');
+  log('info','ℹ️ Todo el análisis estático (XML, macros, metadatos) funciona normalmente.');
+}
+
+// ─── PIPELINE STEPS ────────────────────────────────────────────────────────
+function setStep(id, state, desc){
+  const el=document.getElementById(`step-${id}`);
+  const icon=document.getElementById(`step-${id}-icon`);
+  const descEl=document.getElementById(`step-${id}-desc`);
+  const nums={sdk:1,input:2,request:3,parse:4,creative:5,play:6};
+  el.className=`step step-${state==='ok'?'ok':state==='error'?'error':state==='warn'?'warn':state==='running'?'running':'idle'}`;
+  icon.className=`step-icon icon-${state==='ok'?'ok':state==='error'?'error':state==='warn'?'warn':state==='running'?'running':'idle'}`;
+  icon.textContent=state==='ok'?'✓':state==='error'?'✗':state==='warn'?'⚠':state==='running'?'↻':nums[id];
+  if(desc) descEl.textContent=desc;
+}
+
+function setBadge(type, level, text){
+  const b=document.getElementById('sdkBadge');
+  b.className=`badge badge-${level==='ok'?'ok':level==='warn'?'warn':'err'}`;
+  b.textContent=text;
+}
+
+// ─── TABS ──────────────────────────────────────────────────────────────────
+function switchTab(t){
+  activeTab=t;
+  document.getElementById('inputUrl').style.display=t==='url'?'block':'none';
+  document.getElementById('inputXml').style.display=t==='xml'?'block':'none';
+  document.getElementById('tabUrl').className='tab'+(t==='url'?' active':'');
+  document.getElementById('tabXml').className='tab'+(t==='xml'?' active':'');
+}
+function switchLogTab(t){
+  activeLogTab=t;
+  document.getElementById('logConsole').style.display=t==='logs'?'flex':'none';
+  document.getElementById('errorConsole').style.display=t==='errors'?'flex':'none';
+  document.getElementById('tabLogs').className='tab'+(t==='logs'?' active':'');
+  document.getElementById('tabErrors').className='tab'+(t==='errors'?' active':'');
+}
+
+// ─── LOGGING ──────────────────────────────────────────────────────────────
+function log(type, msg, isErr=false){
+  const ts=new Date().toLocaleTimeString('es-ES',{hour12:false,hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  const cls={info:'log-info',warn:'log-warn',error:'log-error',event:'log-event',track:'log-track'}[type]||'log-info';
+  const e=document.createElement('div');
+  e.className=`log-entry ${cls}`;
+  e.innerHTML=`<span style="color:var(--muted)">${ts}</span> ${esc(msg)}`;
+  const target=isErr?document.getElementById('errorConsole'):document.getElementById('logConsole');
+  target.appendChild(e);
+  target.scrollTop=target.scrollHeight;
+  eventCount++;
+  document.getElementById('eventCount').textContent=`${eventCount} eventos`;
+}
+function clearLogs(){
+  document.getElementById('logConsole').innerHTML='';
+  document.getElementById('errorConsole').innerHTML='';
+  eventCount=0;
+  document.getElementById('eventCount').textContent='0 eventos';
+}
+
+// ─── MACRO CHECKER ────────────────────────────────────────────────────────
+function checkMacros(src){
+  const unfilled=MACROS.filter(({m})=>src.includes(m));
+  const unknown=(src.match(/\[[A-Z_0-9]+\]|%%[A-Z_]+%%/g)||[]).filter(t=>!MACROS.some(m=>m.m===t));
+  const el=document.getElementById('macroResult');
+  if(!unfilled.length&&!unknown.length){
+    el.innerHTML='<span class="badge badge-ok">✓ No se encontraron macros sin rellenar</span>';
+    return;
+  }
+  let html='';
+  if(unfilled.length){
+    html+=`<div style="font-size:.74rem;color:var(--err);font-weight:600;margin-bottom:4px">⚠ ${unfilled.length} macro${unfilled.length>1?'s':''} sin rellenar — el ad server las debería sustituir:</div>`;
+    unfilled.forEach(({m,d})=>{ html+=`<span class="macro-chip macro-bad" title="${esc(d)}">✗ ${esc(m)}</span>`; });
+  }
+  if(unknown.length){
+    html+=`<div style="font-size:.74rem;color:var(--warn);font-weight:600;margin:6px 0 3px">? Macros desconocidas (revisar):</div>`;
+    unknown.forEach(m=>{ html+=`<span class="macro-chip macro-bad">? ${esc(m)}</span>`; });
+  }
+  el.innerHTML=html;
+}
+
+// ─── XML PARSER (simulación / análisis estático) ──────────────────────────
+function parseVastXml(xmlStr){
+  try{
+    const parser=new DOMParser();
+    const doc=parser.parseFromString(xmlStr,'application/xml');
+    const err=doc.querySelector('parsererror');
+    if(err) return {ok:false,msg:'El XML no es válido: '+err.textContent.slice(0,120)};
+
+    const vast=doc.querySelector('VAST');
+    if(!vast) return {ok:false,msg:'No se encontró el elemento raíz <VAST> en el XML.'};
+
+    const version=vast.getAttribute('version')||'?';
+    const ads=[...doc.querySelectorAll('Ad')];
+    const inlines=[...doc.querySelectorAll('InLine')];
+    const wrappers=[...doc.querySelectorAll('Wrapper')];
+    const mediaFiles=[...doc.querySelectorAll('MediaFile')];
+    const duration=doc.querySelector('Duration');
+    const adTitle=doc.querySelector('AdTitle');
+    const adSystem=doc.querySelector('AdSystem');
+    const impUrls=[...doc.querySelectorAll('Impression')].length;
+    const uAdId=doc.querySelector('UniversalAdId');
+    const skipOffset=doc.querySelector('Linear')?.getAttribute('skipoffset');
+
+    return {
+      ok:true, version, ads:ads.length, inlines:inlines.length,
+      wrappers:wrappers.length, mediaFiles:mediaFiles.length,
+      duration:duration?.textContent?.trim()||null,
+      adTitle:adTitle?.textContent?.trim()||null,
+      adSystem:adSystem?.textContent?.trim()||null,
+      impressions:impUrls,
+      uAdId:uAdId?.textContent?.trim()||null,
+      uAdIdRegistry:uAdId?.getAttribute('idRegistry')||null,
+      skipOffset:skipOffset||null,
+      mimeTypes:[...new Set(mediaFiles.map(f=>f.getAttribute('type')).filter(Boolean))],
+      bitrates:[...new Set(mediaFiles.map(f=>f.getAttribute('bitrate')).filter(Boolean))],
+      sizes:[...new Set(mediaFiles.map(f=>`${f.getAttribute('width')}×${f.getAttribute('height')}`).filter(b=>b!=='null×null'))],
+    };
+  }catch(e){ return{ok:false,msg:'Error al procesar el XML: '+e.message}; }
+}
+
+function renderMetaFromXml(p){
+  let html='';
+  const row=(k,v,c)=>{ html+=`<div class="meta-row"><span class="meta-key">${k}</span><span class="meta-val" ${c?`style="color:${c}"`:''}>${v||'—'}</span></div>`; };
+  row('Versión VAST', p.version);
+  row('Título del anuncio', p.adTitle);
+  row('Ad System', p.adSystem);
+  row('Duración declarada', p.duration);
+  row('Anuncios en el VAST', p.ads);
+  if(p.wrappers>0) row('Wrappers', p.wrappers, 'var(--warn)');
+  row('Ficheros de media', p.mediaFiles);
+  row('Tipos MIME', p.mimeTypes.join(', ')||'—');
+  row('Bitrates (kbps)', p.bitrates.join(', ')||'—');
+  row('Resoluciones', p.sizes.join(', ')||'—');
+  row('Píxeles de impresión', p.impressions);
+  if(p.uAdId) row('Universal Ad ID', `${p.uAdId}${p.uAdIdRegistry?' ('+p.uAdIdRegistry+')':''}`, 'var(--warn)');
+  else html+=`<div class="meta-row"><span class="meta-key">Universal Ad ID</span><span class="meta-val" style="color:var(--muted)">No presente</span></div>`;
+  if(p.skipOffset) row('Skip offset', p.skipOffset, 'var(--accent2)');
+  document.getElementById('metaPanel').innerHTML=html;
+}
+
+// ─── BEACON INTERCEPTOR ────────────────────────────────────────────────────
+(function patchBeacons(){
+  const Orig=window.Image;
+  window.Image=function(){
+    const img=new Orig();
+    const desc=Object.getOwnPropertyDescriptor(Orig.prototype,'src');
+    Object.defineProperty(img,'src',{
+      set(v){ if(v&&isTracking(v)) addBeacon(v,'pixel'); desc.set.call(this,v); },
+      get(){ return desc.get.call(this); }
+    });
+    return img;
+  };
+  const oFetch=window.fetch;
+  window.fetch=function(u,...r){ if(typeof u==='string'&&isTracking(u)) addBeacon(u,'fetch'); return oFetch.call(this,u,...r); };
+  const oOpen=XMLHttpRequest.prototype.open;
+  XMLHttpRequest.prototype.open=function(m,u,...r){ if(isTracking(u)) addBeacon(u,'xhr'); return oOpen.apply(this,arguments); };
+})();
+function isTracking(u){ return/impression|tracking|beacon|quartile|complete|start|click|viewable/i.test(u); }
+function addBeacon(url,type){
+  beacons.unshift({url,type,ts:new Date().toLocaleTimeString('es-ES',{hour12:false})});
+  renderBeacons();
+  log('track',`🔵 Beacon [${type}]: ${truncUrl(url)}`);
+}
+function renderBeacons(){
+  const list=document.getElementById('beaconList');
+  if(!beacons.length){list.innerHTML='<div style="color:var(--muted);font-size:.76rem">No se han capturado píxeles.</div>';return;}
+  list.innerHTML=beacons.slice(0,20).map(b=>`
+    <div class="beacon-item">
+      <div class="dot dot-ok"></div>
+      <span style="color:var(--muted);flex-shrink:0">${b.ts}</span>
+      <span style="color:#38bdf8;flex-shrink:0">[${b.type}]</span>
+      <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(b.url)}">${esc(truncUrl(b.url))}</span>
+    </div>`).join('');
+}
+function clearBeacons(){ beacons.length=0; renderBeacons(); }
+
+// ─── IMA INIT ─────────────────────────────────────────────────────────────
+function initIMA(){
+  const video=document.getElementById('videoPlayer');
+  const adCont=document.getElementById('adContainer');
+  adDisplayContainer=new google.ima.AdDisplayContainer(adCont,video);
+  adsLoader=new google.ima.AdsLoader(adDisplayContainer);
+  video.addEventListener('ended',()=>adsLoader.contentComplete());
+  adsLoader.addEventListener(google.ima.AdsManagerLoadedEvent.Type.ADS_MANAGER_LOADED,onAdsManagerLoaded);
+  adsLoader.addEventListener(google.ima.AdErrorEvent.Type.AD_ERROR,onAdError);
+}
+
+// ─── LOAD AD ──────────────────────────────────────────────────────────────
+function loadAd(){
+  const src=activeTab==='url'
+    ? document.getElementById('vastUrl').value.trim()
+    : document.getElementById('vastXml').value.trim();
+
+  if(!src){
+    setStep('input','error','⚠️ Por favor, introduce una URL o pega un XML antes de inspeccionar.');
+    log('warn','⚠️ No se ha introducido ninguna fuente VAST.');
+    return;
+  }
+
+  setStep('input','ok','✓ Fuente detectada: '+(activeTab==='url'?'URL de tag VAST':'XML VAST directo'));
+  log('info', activeTab==='url'?`⬆ Tag URL: ${truncUrl(src)}`:'⬆ XML VAST inyectado directamente.');
+
+  // Always run macro + XML analysis regardless of SDK mode
+  checkMacros(src);
+
+  if(activeTab==='xml'){
+    setStep('request','ok','✓ XML local — no se necesita llamada al servidor.');
+    log('info','📄 Analizando XML sin necesidad de servidor externo…');
+    const parsed=parseVastXml(src);
+    if(!parsed.ok){
+      setStep('parse','error','✗ '+parsed.msg);
+      log('error','✗ '+parsed.msg,true);
+      switchLogTab('errors');
+      return;
+    }
+    setStep('parse','ok',`✓ VAST v${parsed.version} válido — ${parsed.ads} anuncio(s), ${parsed.mediaFiles} fichero(s) de media.`);
+    log('info',`✅ VAST v${parsed.version} parseado: ${parsed.ads} ad(s), ${parsed.inlines} inline(s), ${parsed.wrappers} wrapper(s).`);
+    if(parsed.wrappers>0) log('warn',`⚠️ Este VAST tiene ${parsed.wrappers} wrapper(s). Cada wrapper añade una petición HTTP extra y puede aumentar la latencia.`);
+    if(!parsed.uAdId) log('warn','⚠️ No se encontró Universal Ad ID. Se recomienda para cumplimiento IAB Tech Lab.');
+    if(parsed.mimeTypes.length) log('info',`🎬 Tipos MIME detectados: ${parsed.mimeTypes.join(', ')}`);
+    if(parsed.bitrates.length) log('info',`📶 Bitrates detectados: ${parsed.bitrates.join(', ')} kbps`);
+    renderMetaFromXml(parsed);
+    if(simMode){
+      setStep('creative','warn','⚙ Modo simulación — la reproducción real requiere IMA SDK.');
+      setStep('play','warn','⚙ Modo simulación — eventos de tracking no se dispararán.');
+    } else {
+      setStep('creative','idle','Pendiente de reproducción.');
+    }
+  }
+
+  if(!simMode){
+    if(adsManager){ adsManager.destroy(); adsManager=null; }
+    if(adsLoader){ adsLoader.contentComplete(); adsLoader=null; adDisplayContainer=null; }
+    initIMA();
+    setStep('request','running','Enviando petición al servidor de anuncios…');
+    log('info','📡 Enviando petición al ad server…');
+
+    const req=new google.ima.AdsRequest();
+    if(activeTab==='url') req.adTagUrl=src;
+    else req.adsResponse=src;
+
+    req.linearAdSlotWidth=document.getElementById('adContainer').offsetWidth||640;
+    req.linearAdSlotHeight=document.getElementById('adContainer').offsetHeight||360;
+    req.setAdWillAutoPlay(false);
+    req.setAdWillPlayMuted(false);
+
+    adsLoader.requestAds(req);
+    document.getElementById('playerOverlay').style.display='flex';
+    document.getElementById('playerOverlay').querySelector('div:last-child').textContent='Pulsa para comenzar la reproducción';
+  } else {
+    log('info','ℹ️ Para reproducción real con IMA SDK, sirve este fichero desde un servidor HTTP estándar.');
+  }
+}
+
+// ─── ADS MANAGER LOADED ───────────────────────────────────────────────────
+function onAdsManagerLoaded(evt){
+  setStep('request','ok','✓ Respuesta recibida del servidor de anuncios.');
+  setStep('parse','ok','✓ VAST parseado correctamente por el SDK de Google.');
+  log('event','✅ Anuncio cargado y listo para reproducirse.');
+
+  const video=document.getElementById('videoPlayer');
+  const rs=new google.ima.AdsRenderingSettings();
+  rs.restoreCustomPlaybackStateOnAdBreakComplete=true;
+  rs.loadVideoTimeout=8000;
+
+  adsManager=evt.getAdsManager(video,rs);
+
+  const E=google.ima.AdEvent.Type;
+  const EVENTS=[
+    [E.LOADED,           'Anuncio listo','event'],
+    [E.STARTED,          'Reproducción iniciada ▶','event'],
+    [E.FIRST_QUARTILE,   '25% completado','event'],
+    [E.MIDPOINT,         '50% completado — Midpoint','event'],
+    [E.THIRD_QUARTILE,   '75% completado','event'],
+    [E.COMPLETE,         '100% completado ✓','event'],
+    [E.IMPRESSION,       'Impresión registrada','track'],
+    [E.VIEWABLE_IMPRESSION,'Impresión viewable registrada','track'],
+    [E.CLICK,            'Click-through detectado','event'],
+    [E.PAUSED,           'Anuncio pausado','info'],
+    [E.RESUMED,          'Reproducción reanudada','info'],
+    [E.VOLUME_MUTED,     'Anuncio silenciado','warn'],
+    [E.SKIPPED,          'Anuncio saltado','warn'],
+    [E.ALL_ADS_COMPLETED,'Todos los anuncios finalizados','event'],
+    [E.AD_BREAK_READY,   'Ad break listo','info'],
+  ];
+
+  EVENTS.forEach(([type,label,level])=>{
+    adsManager.addEventListener(type,e=>{
+      const ad=e.getAd?e.getAd():null;
+      if(ad&&type===E.LOADED){
+        renderMetaFromXml(''); // reset
+        const duration=ad.getDuration?ad.getDuration():null;
+        const title=ad.getTitle?ad.getTitle():'—';
+        const adId=ad.getAdId?ad.getAdId():'—';
+        const system=ad.getAdSystem?ad.getAdSystem():'—';
+        const uids=ad.getUniversalAdIds?ad.getUniversalAdIds():[];
+        let html=`
+          <div class="meta-row"><span class="meta-key">Título</span><span class="meta-val">${esc(title)}</span></div>
+          <div class="meta-row"><span class="meta-key">Duración</span><span class="meta-val">${duration>0?duration.toFixed(2)+'s':'—'}</span></div>
+          <div class="meta-row"><span class="meta-key">Ad ID</span><span class="meta-val">${esc(adId)}</span></div>
+          <div class="meta-row"><span class="meta-key">Ad System</span><span class="meta-val">${esc(system)}</span></div>`;
+        if(uids.length) uids.forEach(u=>{ html+=`<div class="meta-row"><span class="meta-key">Universal Ad ID</span><span class="meta-val" style="color:var(--warn)">${esc(u.getAdIdValue?u.getAdIdValue():String(u))}</span></div>`; });
+        document.getElementById('metaPanel').innerHTML=html;
+        setStep('creative','ok','✓ Creativo de vídeo detectado y listo.');
+      }
+      if(type===E.STARTED) setStep('play','running','Reproduciendo — capturando eventos de tracking…');
+      if(type===E.COMPLETE) setStep('play','ok','✓ Reproducción completada. Todos los eventos enviados.');
+      log(level,`◉ ${label}`);
+    });
+  });
+
+  adsManager.addEventListener(google.ima.AdErrorEvent.Type.AD_ERROR,onAdError);
+  log('info','ℹ️ Pulsa ▶ en el reproductor para comenzar.');
+}
+
+function requestPlay(){
+  if(!adDisplayContainer&&!simMode){ log('warn','⚠️ Primero pulsa "Inspeccionar" con un VAST cargado.'); return; }
+  if(simMode){ log('warn','⚙ Modo simulación — la reproducción real no está disponible en este entorno.'); return; }
+  adDisplayContainer.initialize();
+  document.getElementById('playerOverlay').style.display='none';
+  document.getElementById('adContainer').classList.add('active');
+  document.getElementById('videoPlayer').play().catch(e=>log('warn','El navegador bloqueó la reproducción: '+e.message));
+  if(adsManager){
+    try{
+      const el=document.getElementById('adContainer');
+      adsManager.init(el.offsetWidth,el.offsetHeight,google.ima.ViewMode.NORMAL);
+      adsManager.start();
+      log('event','▶ Reproducción del anuncio iniciada.');
+    }catch(e){ onAdError({getError:()=>({getErrorCode:()=>900,getMessage:()=>e.message,getType:()=>'SDK',getInnerError:()=>null})}); }
+  }
+}
+
+// ─── ERROR HANDLER ────────────────────────────────────────────────────────
+function onAdError(evt){
+  const err=evt.getError();
+  const code=err.getErrorCode();
+  const human=IMA_ERRORS[code]||`Error desconocido (código ${code}).`;
+  const raw=err.getMessage();
+  setStep('parse','error',`✗ Error ${code}: ${human}`);
+  log('error',`✗ Error ${code}: ${human}`,true);
+  log('error',`  Detalle técnico: ${raw}`,true);
+  const inner=err.getInnerError?err.getInnerError():null;
+  if(inner) log('error',`  Causa interna: ${inner}`,true);
+  switchLogTab('errors');
+  if(adsManager){ adsManager.destroy(); adsManager=null; }
+}
+
+// ─── RESET ────────────────────────────────────────────────────────────────
+function resetAll(){
+  if(adsManager){ adsManager.destroy(); adsManager=null; }
+  if(adsLoader){ adsLoader.contentComplete(); adsLoader=null; }
+  adDisplayContainer=null;
+  document.getElementById('vastUrl').value='';
+  document.getElementById('vastXml').value='';
+  document.getElementById('metaPanel').innerHTML='<div style="color:var(--muted);font-size:.79rem">Aquí verás información del anuncio: duración, formato, bitrate…</div>';
+  document.getElementById('macroResult').innerHTML='Las macros son variables que el ad server debe rellenar antes de servir el anuncio. Se verificarán al inspeccionar.';
+  document.getElementById('playerOverlay').style.display='flex';
+  document.getElementById('playerOverlay').querySelector('div:last-child').textContent='Carga un VAST y pulsa para reproducir';
+  document.getElementById('adContainer').classList.remove('active');
+  document.getElementById('videoPlayer').pause();
+  document.getElementById('videoPlayer').currentTime=0;
+  clearLogs(); clearBeacons();
+  ['input','request','parse','creative','play'].forEach(s=>setStep(s,'idle',null));
+  log('info','— Sesión reiniciada —');
+}
+
+// ─── UTILS ────────────────────────────────────────────────────────────────
+function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function truncUrl(u){ try{ const x=new URL(u); return x.hostname+x.pathname.slice(0,35)+(u.length>60?'…':''); }catch{ return String(u).slice(0,55); } }
+
+window.addEventListener('resize',()=>{ if(adsManager){ const el=document.getElementById('adContainer'); adsManager.resize(el.offsetWidth,el.offsetHeight,google.ima.ViewMode.NORMAL); } });
+
+// Boot log
+log('info','VAST Inspector Pro v2.0 iniciado.');
+log('info','Soporta: VAST 2.0 / 3.0 / 4.x · Wrappers · VMAP · Raw XML');
+
+// Load SDK now that all functions exist
+loadImaSdk();
+</script>
+</body>
+</html>
